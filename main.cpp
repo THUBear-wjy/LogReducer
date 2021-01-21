@@ -15,7 +15,7 @@
 #include "constant.h"
 #include <map>
 #include "LengthSearch.h"
-#include "zigzag.h"
+#include "elastic.h"
 #include "util.h"
 using namespace std;
 
