@@ -16,5 +16,5 @@ clean:
 	rm -rf $(OBJS) $(EXEC)
 	rm -rf Iddiff
 	rm -rf Numdiff
-	rm -rf Entropy
-	rm -rf *.o
+	rm -rf Entropy  
+	rm -rf Elastic 

@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parse.add_argument("--SampleRate", "-R", default="0.001", help="Sample rate, default by 0.001")
     
     parse.add_argument("--HeadLength", "-L", default="4", help="The designated head length")
-    parse.add_argument("--IsMulti", default="T", choices=["T", "F"])
+    parse.add_argument("--IsMulti", default="F", choices=["T", "F"])
     parse.add_argument("--HeadRegex", default=r"\[\d{4}\-\d{2}\-\d{2}")
 
     args = parse.parse_args()
@@ -58,7 +58,8 @@ if __name__ == "__main__":
 
     loader = logloader.LogLoader(headLength=head_length, isMulti=is_multi, headRegex=head_regex, maxLength=max_length)
     LogData, Heads, HeadDelimers = loader.load_to_dataframe(input_path + ".sample")
-
+    
+#print(Heads)
     #Extract head format
     Header = header.Header(head_length = head_length, is_multi=is_multi, head_bound=head_regex, template_path = template_path, heads = Heads, delimer=HeadDelimers)
     Header.outputFormat()

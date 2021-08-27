@@ -71,7 +71,7 @@ def decoder(path, is_encoder=True):
     if not is_encoder:
         return path
     new_path = path + ".txt"
-    res = call("./Zigzag d " + path + " " + new_path + " O", shell=True)
+    res = call("./Elastic d " + path + " " + new_path + " O", shell=True)
     if (res != 0):
         print("Error")
     return new_path

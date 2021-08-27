@@ -20,7 +20,8 @@ class Header:
         for h in head:
             hs = [''.join(list(g)) for k,g in groupby(h, key=lambda x:x.isdigit())]
             Hpart.append(hs)
-        
+#print(head)
+#        print(Hpart) 
         Hpart_len = list(map(lambda x:len(x), Hpart))
         Hcount = max(Hpart_len, key=Hpart_len.count)
         if (pd.value_counts(Hpart_len)[Hcount] < len(Hpart_len) * self.threshold): #Different lenght -> Regular string

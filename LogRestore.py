@@ -45,7 +45,6 @@ def check_args(args):
         print("No output path. Will make new directory at {}".format(args.Output))
     else:
         call("rm -rf " + args.Output,shell=True)
-    os.mkdir(args.Output)
     return 1
     
 def atomic_addTime(step):
@@ -74,29 +73,24 @@ def writeLog(fname, message, levelStr):
 def procFiles(typename, fileBeginNo, fileEndNo, now_input, now_output, now_temp, type_template):
     t1 = time.time()
     #parser
-    now_temp += threading.current_thread().name  + "/"
-    if (not os.path.exists(now_temp)):
-        os.mkdir(now_temp)
-    order = "./THULR -I " + now_input + " -X " + str(fileBeginNo) + " -Y " + str(fileEndNo) + " -O " + now_temp + " -T " + util.path_pro(type_template) + " -E " + encoder_mode + " -D " + time_diff + " -F " + os.path.join(type_template,"head.format")
-    print(order + " " + threading.current_thread().name)
-    res = call(order,shell=True)
-    if (res != 0):
-        tempStr = "Error Occur at: {} thread: {}, fileNo: {} to {}".format(typename, threading.current_thread().name, fileBeginNo, fileEndNo)
-        print (tempStr)
-        writeLog(str(output_path) + "Log_{}".format(datetime.date.today()), tempStr,'WARNING')
-        atomic_addErrnum(1)
-    #compress
-    for i in range(fileBeginNo, fileEndNo + 1):
-        filename = "{}".format(i)
-        zip_path = str(now_output) + str(filename) + ".7z"
-        compression_order = "7za a " + zip_path + " " + now_temp + filename + "/*" + " -m0=LZMA"
-        call(compression_order, shell=True)
-        call("rm -rf " + now_temp + filename + "/*", shell=True)
+    thread_temp = os.path.join(now_temp, threading.current_thread().name  + "/")
+    if (os.path.exists(thread_temp)):
+        call("rm -rf " + thread_temp)
+    os.mkdir(thread_temp)    
+    for t in range(fileBeginNo, fileEndNo+1):
+        order = "python3 ./restore.py -I " + os.path.join(now_input,str(t)+".7z") + " -O " + os.path.join(now_temp,str(t)+".col") + " -T " + type_template + " -t " + thread_temp
+        print(order + " " + threading.current_thread().name)
+        res = call(order,shell=True)
+        if (res != 0):
+            tempStr = "Error Occur at: {} thread: {}, fileNo: {} to {}".format(typename, threading.current_thread().name, fileBeginNo, fileEndNo)
+            print (tempStr)
+            writeLog(str(output_path) + "Log_{}".format(datetime.date.today()), tempStr,'WARNING')
+            atomic_addErrnum(1)
+            continue
     t2 = time.time()
     tempStr = "thread:{}, type:{}, fileNo: {} to {} , cost time: {}".format(threading.current_thread().name, typename, fileBeginNo, fileEndNo, t2 - t1)
     print (tempStr)
     writeLog(str(output_path) + "Log_{}".format(datetime.date.today()), tempStr,'WARNING')
-
     return t2 - t1
 
 def procFiles_result(future):
@@ -126,7 +120,7 @@ def threadsToExecTasks(typename, files, now_input, now_output, now_temp, type_te
     curFileNumEnd = 0
     step = maxSingleThreadProcFilesNum
     if (step == 0):# dynamic step
-        step = fileListLen // maxThreadNum
+        step = (fileListLen // maxThreadNum) + 1
         if(step == 0):
             step = 1 # make sure the step is bigger than 0
     
@@ -154,7 +148,7 @@ if __name__ == "__main__":
     #init params
     input_path = args.Input
     template_path = util.path_pro(args.Template)
-    output_path = util.path_pro(args.Output)
+    output_path = args.Output
     template_level = args.TemplateLevel
     time_diff = args.TimeDiff
     encoder_mode = args.EncoderMode
@@ -165,71 +159,65 @@ if __name__ == "__main__":
     blockSize = int(args.BlockSize)
     #threadPool = ThreadPoolExecutor(max_workers = maxThreadNum, thread_name_prefix="test_")
     time1 = time.time()
-    filename = input_path.split("/")[-1]
-    print(filename)
-    path = input_path.split(filename)[0]
-    now_type = filename.split(".")[0]
-    if (mode == "Tot"):
-        seg_path = os.path.join(path, now_type + "_Segment/")
-        if os.path.exists(seg_path):
-            call("rm -rf "+seg_path,shell=True)
-        os.mkdir(seg_path)
-        
-        f = open(input_path, encoding = "ISO-8859-1")
-        cou = 0
-        count = 0
-        buffer = []
-        while True:
-            line = f.readline()
-            if not line:
-                util.list_write(os.path.join(seg_path, str(cou) + ".col"), buffer, True)
-                break
-                
-            buffer.append(line)
-            count += 1
-                
-            if count == blockSize:
-                count = 0
-                util.list_write(os.path.join(seg_path, str(cou) + ".col"), buffer, True)
-                buffer = []
-                cou += 1
-    else:
-        seg_path = input_path
+    all_files = []
+    for f in os.listdir(input_path):
+        try:
+            if (f.split(".")[1] == "7z"):
+                all_files.append(f)
+        except:
+            continue
 
-                
-    time_t1 = time.time()
-    all_files = os.listdir(seg_path)
     type_template = template_path
-    temp_path = os.path.join(output_path,"tmp/")
-    if (not os.path.exists(temp_path)):
-        os.mkdir(temp_path)
+    
+    filename = output_path.split("/")[-1]
+    path = util.path_pro(output_path.split(filename)[0])
+    print("filename: {}, path: {}".format(filename, path))
 
-    now_temp = temp_path
+    now_input = input_path
+    now_output = path
+    if (not os.path.exists(path)):
+        os.mkdir(path)
+
+    now_temp = os.path.join(path,"tmp/")
     if (not os.path.exists(now_temp)):
         pass
     else:
         call("rm -rf " + now_temp, shell=True)
     os.mkdir(now_temp)
-        
-    now_input = seg_path
-    now_output = output_path
-    if (not os.path.exists(now_output)):
-        os.mkdir(now_output)
-        
-        ###ThreadPool to Proc Files
+
+    now_type = filename.split(".")[0]
+    print(len(all_files))
     threadsToExecTasks(now_type, all_files, now_input, now_output, now_temp, type_template)
+    
+    #Merge
+    if (mode == "Tot"):
+        fw = open(output_path, 'w')
+        for i in range(0, len(all_files)):
+            now_path = os.path.join(now_temp, str(i)+".col")
+            if not (os.path.exists(now_path)):
+                print(now_path + " does not exist")
+                continue
+            fo = open(now_path, 'r')
+            while True:
+                line = fo.readline()
+                if not line:
+                    break
+                fw.write(line)
+        fw.close()
+     
+    time_t1 = time.time()
         
     time_t2 = time.time()
     tempStr = "{} finished, total time cost: {} , thread accum time: {}".format(now_output, time_t2 - time_t1, gl_threadTotTime)
     print(tempStr)
-    writeLog(str(output_path) + "Log_{}".format(datetime.date.today()), tempStr,'WARNING')
+    writeLog(str(output_path) + "_Log_{}".format(datetime.date.today()), tempStr,'WARNING')
     gl_threadTotTime = 0 # reset
     calcuReduceRate(now_input, now_output, input_path)
 
     time2 = time.time() 
     tempStr = "{} Main finished, total time cost: {} , error num: {}".format(output_path, time2 - time1, gl_errorNum)
     print(tempStr)
-    writeLog(str(output_path) + "Log_{}".format(datetime.date.today()), tempStr,'WARNING')
+    writeLog(str(output_path) + "_Log_{}".format(datetime.date.today()), tempStr,'WARNING')
 
    
 
