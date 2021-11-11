@@ -36,4 +36,4 @@ Step 2: Compression(Using template at <em>./template/</em> and generate result a
 ## Decompression
 Assume the path of compressed log file is ./out/ and the original file is /path/xx.log. The template to compress file is ./template/
 
-`python3 LogRestore.py -I ./out/ -T ./template/ -O /path/xx.log`
+`python3 LogRestore.py -I ./out/ -T ./template/ -O ./xx.log`
